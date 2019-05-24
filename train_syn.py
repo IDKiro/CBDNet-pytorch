@@ -32,7 +32,7 @@ class fixed_loss(nn.Module):
                 0.5 * torch.mean(torch.mul(torch.abs(0.3 - F.relu(gt_noise - est_noise)), torch.pow(est_noise - gt_noise, 2))) + \
                 0.05 * tvloss
         return loss
-        
+
     def _tensor_size(self,t):
         return t.size()[1]*t.size()[2]*t.size()[3]
 
@@ -123,11 +123,10 @@ else:
 criterion = fixed_loss()
 criterion = criterion.cuda()
 
-losses = AverageMeter()
-
 for epoch in range(cur_epoch, 1001):
     cnt=0
-
+    losses = AverageMeter()
+    
     for ind in np.random.permutation(len(train_fns)):
         train_fn = train_fns[ind]
 
@@ -188,8 +187,6 @@ for epoch in range(cur_epoch, 1001):
             input_var, target_var, noise_level_var = input_var.cuda(), target_var.cuda(), noise_level_var.cuda()
 
             noise_level_est, output = model(input_var)
-
-            output = output.unsqueeze(0)
 
             loss = criterion(output, target_var, noise_level_est, noise_level_var)
             losses.update(loss.item())
