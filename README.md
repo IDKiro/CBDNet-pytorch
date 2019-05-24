@@ -1,8 +1,12 @@
 # CBDNet-pytorch
 
+**Warning: This repo has not been finished!**
+
 An unofficial implementation of CBDNet by PyTorch.
 
 [CBDNet in MATLAB](https://github.com/GuoShi28/CBDNet)
+
+[CBDNet in Tensorflow](https://github.com/IDKiro/CBDNet-tensorflow)
 
 ## Quick Start
 
@@ -14,18 +18,6 @@ Train the model on synthetic noisy images :
 
 ```
 python train_syn.py
-```
-
-Train the model on real noisy images:
-
-```
-python train_real.py
-```
-
-Test the trained model on DND dataset:
-
-```
-python test.py
 ```
 
 ## Network Structure
