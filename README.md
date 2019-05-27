@@ -10,7 +10,7 @@ An unofficial implementation of CBDNet by PyTorch.
 
 ## Quick Start
 
-Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h) and pretrained [model]() and decompression the files to `dataset` and `checkpoint` folder as follow:
+Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h) and decompression the files to `dataset`, and then download the pretrained [model](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/EXJF791Lo3lMmn7yQiXjMRoB74QYhR97BaL1yZnLoNLJIA?e=OPgck0) and remove it to `checkpoint` folder as follow:
 
 ![](imgs/folder.png)
 
@@ -30,6 +30,12 @@ Test the trained model on DND dataset:
 
 ```
 python test.py
+```
+
+*The images in DND dataset is very large, if your GPU is not powerfull enough, just uncomment the following line:*
+
+```python
+# noisy_img = noisy_img[0:512, 0:512, :]
 ```
 
 ## Network Structure
