@@ -69,31 +69,15 @@ def hwc_to_chw(img):
 def chw_to_hwc(img):
     return np.transpose(img, axes=[1, 2, 0])
 
-input_dir = './dataset/synthetic/'
+input_dir = './dataset/real/'
 checkpoint_dir = './checkpoint/'
 result_dir = './result/'
 
-LEVEL = 1
+ps = 512
 save_freq = 100
-lr_update_freq = 150
+lr_update_freq = 1000
 
-CRF = scipy.io.loadmat('matdata/201_CRF_data.mat')
-iCRF = scipy.io.loadmat('matdata/dorfCurvesInv.mat')
-B_gl = CRF['B']
-I_gl = CRF['I']
-B_inv_gl = iCRF['invB']
-I_inv_gl = iCRF['invI']
-
-if os.path.exists('matdata/201_CRF_iCRF_function.mat')==0:
-    CRF_para = np.array(CRF_function_transfer(I_gl, B_gl))
-    iCRF_para = 1. / CRF_para
-    scipy.io.savemat('matdata/201_CRF_iCRF_function.mat', {'CRF':CRF_para, 'iCRF':iCRF_para})
-else:
-    Bundle = scipy.io.loadmat('matdata/201_CRF_iCRF_function.mat')
-    CRF_para = Bundle['CRF']
-    iCRF_para = Bundle['iCRF']
-
-train_fns = glob.glob(input_dir + '*.bmp')
+train_fns = glob.glob(input_dir + 'Batch_*')
 
 origin_imgs = [None] * len(train_fns)
 noise_imgs = [None] * len(train_fns)
@@ -123,37 +107,42 @@ else:
 criterion = fixed_loss()
 criterion = criterion.cuda()
 
-for epoch in range(cur_epoch, 301):
+for epoch in range(cur_epoch, 2001):
     cnt=0
     losses = AverageMeter()
     model.train()
-    
+
     for ind in np.random.permutation(len(train_fns)):
         train_fn = train_fns[ind]
 
         if not len(origin_imgs[ind]):
-            origin_img = cv2.imread(train_fn)
+            train_origin_fns = glob.glob(train_fn + '/*Reference.bmp')
+            train_noise_fns = glob.glob(train_fn + '/*Noisy.bmp')
+
+            origin_img = cv2.imread(train_origin_fns[0])
             origin_img = origin_img[:,:,::-1] / 255.0
             origin_imgs[ind] = np.array(origin_img).astype('float32')
 
-        # re-add noise
-        if epoch % save_freq == 0:
-            noise_imgs[ind] = []
-
-        if len(noise_imgs[ind]) < LEVEL:
-            for noise_i in range(LEVEL):
-                sigma_s = np.random.uniform(0.0, 0.16, (3,))
-                sigma_c = np.random.uniform(0.0, 0.06, (3,))
-                CRF_index = np.random.choice(201)
-                pattern = np.random.choice(4) + 1
-
-                noise_img = AddNoiseMosai(origin_imgs[ind][:, :, :], CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl, sigma_s, sigma_c, CRF_index, pattern, 0)
+            for train_noise_fn in train_noise_fns:
+                noise_img = cv2.imread(train_noise_fn)
+                noise_img = noise_img[:,:,::-1] / 255.0
+                noise_img = np.array(noise_img).astype('float32')
                 noise_imgs[ind].append(noise_img)
+
 
         st = time.time()
         for nind in np.random.permutation(len(noise_imgs[ind])):
-            temp_origin_img = origin_imgs[ind]
-            temp_noise_img = noise_imgs[ind][nind]
+            H = origin_imgs[ind].shape[0]
+            W = origin_imgs[ind].shape[1]
+
+            ps_temp = min(H, W, ps) - 1
+
+            xx = np.random.randint(0, W-ps_temp)
+            yy = np.random.randint(0, H-ps_temp)
+            
+            temp_origin_img = origin_imgs[ind][yy:yy+ps_temp, xx:xx+ps_temp, :]
+            temp_noise_img = noise_imgs[ind][nind][yy:yy+ps_temp, xx:xx+ps_temp, :]
+
             if np.random.randint(2, size=1)[0] == 1:
                 temp_origin_img = np.flip(temp_origin_img, axis=1)
                 temp_noise_img = np.flip(temp_noise_img, axis=1)
@@ -171,8 +160,7 @@ for epoch in range(cur_epoch, 301):
             noise_level_chw = hwc_to_chw(noise_level)
 
             cnt += 1
-            if cnt % LEVEL == 1:
-                st = time.time()
+            st = time.time()
 
             optimizer = adjust_learning_rate(optimizer, epoch, lr_update_freq)
 
@@ -196,15 +184,14 @@ for epoch in range(cur_epoch, 301):
             loss.backward()
             optimizer.step()
 
-            if cnt % LEVEL == 0:
-                print('[{0}][{1}/{2}]\t'
-                    'lr: {lr:.5f}\t'
-                    'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
-                    'Time: {time:.3f}'.format(
-                    epoch, cnt, len(train_fns),
-                    lr=optimizer.param_groups[-1]['lr'],
-                    loss=losses,
-                    time=time.time()-st))
+            print('[{0}][{1}/{2}]\t'
+                'lr: {lr:.5f}\t'
+                'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
+                'Time: {time:.3f}'.format(
+                epoch, cnt, len(train_fns),
+                lr=optimizer.param_groups[-1]['lr'],
+                loss=losses,
+                time=time.time()-st))
 
             if epoch % save_freq == 0:
                 if not os.path.isdir(result_dir + '%04d'%epoch):
