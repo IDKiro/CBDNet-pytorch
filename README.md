@@ -1,7 +1,5 @@
 # CBDNet-pytorch
 
-**Warning: This repo has not been finished!**
-
 An unofficial implementation of CBDNet by PyTorch.
 
 [CBDNet in MATLAB](https://github.com/GuoShi28/CBDNet)

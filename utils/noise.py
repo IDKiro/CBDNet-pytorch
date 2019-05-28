@@ -168,3 +168,12 @@ def AddNoiseMosai(x, CRF_para, iCRF_para, I, B, Iinv, Binv, sigma_s, sigma_c, cr
         result = x + diff
     
     return result
+
+def AddRealNoise(image, CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl):
+    sigma_s = np.random.uniform(0.0, 0.16, (3,))
+    sigma_c = np.random.uniform(0.0, 0.06, (3,))
+    CRF_index = np.random.choice(201)
+    pattern = np.random.choice(4) + 1
+    noise_img = AddNoiseMosai(image, CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl, sigma_s, sigma_c, CRF_index, pattern, 0)
+    return noise_img
+

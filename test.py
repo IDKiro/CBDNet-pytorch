@@ -12,7 +12,8 @@ import glob
 import re
 import cv2
 
-from utils import *
+from utils.noise import *
+from utils.common import *
 from model import *
 
 

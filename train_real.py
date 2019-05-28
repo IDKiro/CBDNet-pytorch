@@ -12,7 +12,8 @@ import glob
 import re
 import cv2
 
-from utils import *
+from utils.noise import *
+from utils.common import *
 from model import *
 
 class fixed_loss(nn.Module):
@@ -52,6 +53,39 @@ class AverageMeter(object):
 		self.count += n
 		self.avg = self.sum / self.count
 
+def DataAugmentation(temp_origin_img, temp_noise_img):
+    if np.random.randint(2, size=1)[0] == 1:
+        temp_origin_img = np.flip(temp_origin_img, axis=1)
+        temp_noise_img = np.flip(temp_noise_img, axis=1)
+    if np.random.randint(2, size=1)[0] == 1: 
+        temp_origin_img = np.flip(temp_origin_img, axis=0)
+        temp_noise_img = np.flip(temp_noise_img, axis=0)
+    if np.random.randint(2, size=1)[0] == 1:
+        temp_origin_img = np.transpose(temp_origin_img, (1, 0, 2))
+        temp_noise_img = np.transpose(temp_noise_img, (1, 0, 2))
+    
+    return temp_origin_img, temp_noise_img
+
+def load_checkpoint(checkpoint_dir):
+    if os.path.exists(checkpoint_dir + 'checkpoint.pth.tar'):
+        # load existing model
+        model_info = torch.load(checkpoint_dir + 'checkpoint.pth.tar')
+        print('==> loading existing model:', checkpoint_dir + 'checkpoint.pth.tar')
+        model = CBDNet()
+        model.cuda()
+        model.load_state_dict(model_info['state_dict'])
+        optimizer = torch.optim.Adam(model.parameters())
+        optimizer.load_state_dict(model_info['optimizer'])
+        cur_epoch = model_info['epoch']
+    else:
+        # create model
+        model = CBDNet()
+        model.cuda()
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+        cur_epoch = 0
+
+    return model, optimizer, cur_epoch
+
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 	torch.save(state, checkpoint_dir + 'checkpoint.pth.tar')
 	if is_best:
@@ -86,23 +120,7 @@ for i in range(len(train_fns)):
     origin_imgs[i] = []
     noise_imgs[i] = []
 
-# model setting
-if os.path.exists(checkpoint_dir + 'checkpoint.pth.tar'):
-    # load existing model
-    model_info = torch.load(checkpoint_dir + 'checkpoint.pth.tar')
-    print('==> loading existing model:', checkpoint_dir + 'checkpoint.pth.tar')
-    model = CBDNet()
-    model.cuda()
-    model.load_state_dict(model_info['state_dict'])
-    optimizer = torch.optim.Adam(model.parameters())
-    optimizer.load_state_dict(model_info['optimizer'])
-    cur_epoch = model_info['epoch']
-else:
-    # create model
-    model = CBDNet()
-    model.cuda()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    cur_epoch = 0
+model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
 criterion = fixed_loss()
 criterion = criterion.cuda()
@@ -142,16 +160,7 @@ for epoch in range(cur_epoch, 2001):
             
             temp_origin_img = origin_imgs[ind][yy:yy+ps_temp, xx:xx+ps_temp, :]
             temp_noise_img = noise_imgs[ind][nind][yy:yy+ps_temp, xx:xx+ps_temp, :]
-
-            if np.random.randint(2, size=1)[0] == 1:
-                temp_origin_img = np.flip(temp_origin_img, axis=1)
-                temp_noise_img = np.flip(temp_noise_img, axis=1)
-            if np.random.randint(2, size=1)[0] == 1: 
-                temp_origin_img = np.flip(temp_origin_img, axis=0)
-                temp_noise_img = np.flip(temp_noise_img, axis=0)
-            if np.random.randint(2, size=1)[0] == 1:
-                temp_origin_img = np.transpose(temp_origin_img, (1, 0, 2))
-                temp_noise_img = np.transpose(temp_noise_img, (1, 0, 2))
+            temp_origin_img, temp_noise_img = DataAugmentation(temp_origin_img, temp_noise_img)
             
             noise_level = temp_noise_img - temp_origin_img
 
