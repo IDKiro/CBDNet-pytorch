@@ -3,8 +3,6 @@ from __future__ import print_function
 import os, time, scipy.io, shutil
 import torch
 import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms, utils
 from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np

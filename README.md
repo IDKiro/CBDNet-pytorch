@@ -12,7 +12,7 @@ Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103
 
 ![](imgs/folder.png)
 
-Train the model on synthetic noisy images :
+Train the model on synthetic noisy images:
 
 ```
 python train_syn.py
@@ -22,6 +22,12 @@ Train the model on real noisy images:
 
 ```
 python train_real.py
+```
+
+Train the model on synthetic noisy images and real noisy images:
+
+```
+python train_all.py
 ```
 
 Test the trained model on DND dataset:

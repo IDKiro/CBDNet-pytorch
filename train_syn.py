@@ -3,8 +3,6 @@ from __future__ import print_function
 import os, time, scipy.io, shutil
 import torch
 import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms, utils
 from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
@@ -16,42 +14,6 @@ from utils.noise import *
 from utils.common import *
 from model import *
 
-class fixed_loss(nn.Module):
-    def __init__(self):
-        super().__init__()
-        
-    def forward(self, out_image, gt_image, est_noise, gt_noise):
-        h_x = est_noise.size()[2]
-        w_x = est_noise.size()[3]
-        count_h = self._tensor_size(est_noise[:,:,1:,:])
-        count_w = self._tensor_size(est_noise[:,:,:,1:])
-        h_tv = torch.pow((est_noise[:,:,1:,:]-est_noise[:,:,:h_x-1,:]),2).sum()
-        w_tv = torch.pow((est_noise[:,:,:,1:]-est_noise[:,:,:,:w_x-1]),2).sum()
-        tvloss = h_tv/count_h + w_tv/count_w
-
-        loss = torch.mean(torch.pow((out_image - gt_image), 2)) + \
-                0.5 * torch.mean(torch.mul(torch.abs(0.3 - F.relu(gt_noise - est_noise)), torch.pow(est_noise - gt_noise, 2))) + \
-                0.05 * tvloss
-        return loss
-
-    def _tensor_size(self,t):
-        return t.size()[1]*t.size()[2]*t.size()[3]
-
-class AverageMeter(object):
-	def __init__(self):
-		self.reset()
-
-	def reset(self):
-		self.val = 0
-		self.avg = 0
-		self.sum = 0
-		self.count = 0
-
-	def update(self, val, n=1):
-		self.val = val
-		self.sum += val * n
-		self.count += n
-		self.avg = self.sum / self.count
 
 def load_CRF():
     CRF = scipy.io.loadmat('matdata/201_CRF_data.mat')
@@ -116,112 +78,107 @@ def adjust_learning_rate(optimizer, epoch, lr_update_freq):
 			param_group['lr'] = param_group['lr'] * 0.1
 	return optimizer
 
-def hwc_to_chw(img):
-    return np.transpose(img, axes=[2, 0, 1])
 
-def chw_to_hwc(img):
-    return np.transpose(img, axes=[1, 2, 0])
+if __name__ == '__main__':
+    input_dir = './dataset/synthetic/'
+    checkpoint_dir = './checkpoint/'
+    result_dir = './result/'
 
-input_dir = './dataset/synthetic/'
-checkpoint_dir = './checkpoint/'
-result_dir = './result/'
+    save_freq = 100
+    lr_update_freq = 150
 
-save_freq = 100
-lr_update_freq = 150
+    CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl = load_CRF()
 
-CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl = load_CRF()
+    train_fns = glob.glob(input_dir + '*.bmp')
 
-train_fns = glob.glob(input_dir + '*.bmp')
+    origin_imgs = [None] * len(train_fns)
+    noise_imgs = [None] * len(train_fns)
 
-origin_imgs = [None] * len(train_fns)
-noise_imgs = [None] * len(train_fns)
+    for i in range(len(train_fns)):
+        origin_imgs[i] = []
+        noise_imgs[i] = []
 
-for i in range(len(train_fns)):
-    origin_imgs[i] = []
-    noise_imgs[i] = []
+    model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
-model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
+    criterion = fixed_loss()
+    criterion = criterion.cuda()
 
-criterion = fixed_loss()
-criterion = criterion.cuda()
+    for epoch in range(cur_epoch, 301):
+        cnt=0
+        losses = AverageMeter()
+        optimizer = adjust_learning_rate(optimizer, epoch, lr_update_freq)
+        model.train()
+        
+        for ind in np.random.permutation(len(train_fns)):
+            train_fn = train_fns[ind]
 
-for epoch in range(cur_epoch, 301):
-    cnt=0
-    losses = AverageMeter()
-    model.train()
-    
-    for ind in np.random.permutation(len(train_fns)):
-        train_fn = train_fns[ind]
+            if not len(origin_imgs[ind]):
+                origin_img = cv2.imread(train_fn)
+                origin_img = origin_img[:,:,::-1] / 255.0
+                origin_imgs[ind] = np.array(origin_img).astype('float32')
 
-        if not len(origin_imgs[ind]):
-            origin_img = cv2.imread(train_fn)
-            origin_img = origin_img[:,:,::-1] / 255.0
-            origin_imgs[ind] = np.array(origin_img).astype('float32')
-
-        # re-add noise
-        if epoch % save_freq == 0:
-            noise_imgs[ind] = []
-
-        if len(noise_imgs[ind]) < 1:
-            noise_img = AddRealNoise(origin_imgs[ind][:, :, :], CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl)
-            noise_imgs[ind].append(noise_img)
-
-        st = time.time()
-        for nind in np.random.permutation(len(noise_imgs[ind])):
-            temp_origin_img = origin_imgs[ind]
-            temp_noise_img = noise_imgs[ind][nind]
-            temp_origin_img, temp_noise_img = DataAugmentation(temp_origin_img, temp_noise_img)
-            noise_level = temp_noise_img - temp_origin_img
-
-            temp_noise_img_chw = hwc_to_chw(temp_noise_img)
-            temp_origin_img_chw = hwc_to_chw(temp_origin_img)
-            noise_level_chw = hwc_to_chw(noise_level)
-
-            cnt += 1
-            st = time.time()
-
-            optimizer = adjust_learning_rate(optimizer, epoch, lr_update_freq)
-
-            input_var = torch.autograd.Variable(
-                torch.from_numpy(temp_noise_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                )
-            target_var = torch.autograd.Variable(
-                torch.from_numpy(temp_origin_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                )
-            noise_level_var = torch.autograd.Variable(
-                torch.from_numpy(noise_level_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                )
-            input_var, target_var, noise_level_var = input_var.cuda(), target_var.cuda(), noise_level_var.cuda()
-
-            noise_level_est, output = model(input_var)
-
-            loss = criterion(output, target_var, noise_level_est, noise_level_var)
-            losses.update(loss.item())
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            print('[{0}][{1}/{2}]\t'
-                'lr: {lr:.5f}\t'
-                'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
-                'Time: {time:.3f}'.format(
-                epoch, cnt, len(train_fns),
-                lr=optimizer.param_groups[-1]['lr'],
-                loss=losses,
-                time=time.time()-st))
-
+            # re-add noise
             if epoch % save_freq == 0:
-                if not os.path.isdir(result_dir + '%04d'%epoch):
-                    os.makedirs(result_dir + '%04d'%epoch)
+                noise_imgs[ind] = []
 
-                output_np = output.squeeze().cpu().detach().numpy()
-                output_np = chw_to_hwc(np.clip(output_np, 0, 1))
+            if len(noise_imgs[ind]) < 1:
+                noise_img = AddRealNoise(origin_imgs[ind][:, :, :], CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl)
+                noise_imgs[ind].append(noise_img)
 
-                temp = np.concatenate((temp_origin_img, temp_noise_img, output_np), axis=1)
-                scipy.misc.toimage(temp*255, high=255, low=0, cmin=0, cmax=255).save(result_dir + '%04d/train_%d_%d.jpg'%(epoch, ind, nind))
-    
-    save_checkpoint({
-        'epoch': epoch + 1,
-        'state_dict': model.state_dict(),
-        'optimizer' : optimizer.state_dict()}, is_best=0)
+            st = time.time()
+            for nind in np.random.permutation(len(noise_imgs[ind])):
+                temp_origin_img = origin_imgs[ind]
+                temp_noise_img = noise_imgs[ind][nind]
+                temp_origin_img, temp_noise_img = DataAugmentation(temp_origin_img, temp_noise_img)
+                noise_level = temp_noise_img - temp_origin_img
+
+                temp_noise_img_chw = hwc_to_chw(temp_noise_img)
+                temp_origin_img_chw = hwc_to_chw(temp_origin_img)
+                noise_level_chw = hwc_to_chw(noise_level)
+
+                cnt += 1
+                st = time.time()
+
+                input_var = torch.autograd.Variable(
+                    torch.from_numpy(temp_noise_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
+                    )
+                target_var = torch.autograd.Variable(
+                    torch.from_numpy(temp_origin_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
+                    )
+                noise_level_var = torch.autograd.Variable(
+                    torch.from_numpy(noise_level_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
+                    )
+                input_var, target_var, noise_level_var = input_var.cuda(), target_var.cuda(), noise_level_var.cuda()
+
+                noise_level_est, output = model(input_var)
+
+                loss = criterion(output, target_var, noise_level_est, noise_level_var)
+                losses.update(loss.item())
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                print('[{0}][{1}/{2}]\t'
+                    'lr: {lr:.5f}\t'
+                    'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
+                    'Time: {time:.3f}'.format(
+                    epoch, cnt, len(train_fns),
+                    lr=optimizer.param_groups[-1]['lr'],
+                    loss=losses,
+                    time=time.time()-st))
+
+                if epoch % save_freq == 0:
+                    if not os.path.isdir(result_dir + '%04d'%epoch):
+                        os.makedirs(result_dir + '%04d'%epoch)
+
+                    output_np = output.squeeze().cpu().detach().numpy()
+                    output_np = chw_to_hwc(np.clip(output_np, 0, 1))
+
+                    temp = np.concatenate((temp_origin_img, temp_noise_img, output_np), axis=1)
+                    scipy.misc.toimage(temp*255, high=255, low=0, cmin=0, cmax=255).save(result_dir + '%04d/train_%d_%d.jpg'%(epoch, ind, nind))
+        
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'optimizer' : optimizer.state_dict()}, is_best=0)
