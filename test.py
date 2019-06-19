@@ -15,12 +15,6 @@ from utils.common import *
 from model import *
 
 
-def hwc_to_chw(img):
-    return np.transpose(img, axes=[2, 0, 1])
-
-def chw_to_hwc(img):
-    return np.transpose(img, axes=[1, 2, 0])
-
 input_dir = './dataset/test/'
 checkpoint_dir = './checkpoint/'
 result_dir = './result/'
@@ -37,6 +31,7 @@ if os.path.exists(checkpoint_dir + 'checkpoint.pth.tar'):
     model.load_state_dict(model_info['state_dict'])
 else:
     print('Error: No trained model detected!')
+    exit(1)
 
 if not os.path.isdir(result_dir + 'test/'):
     os.makedirs(result_dir + 'test/')
