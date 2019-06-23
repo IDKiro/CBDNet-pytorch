@@ -1,7 +1,5 @@
 # CBDNet-pytorch
 
-**Warning: there's something wrong, I'll fix it soon.**
-
 An unofficial implementation of CBDNet by PyTorch.
 
 [CBDNet in MATLAB](https://github.com/GuoShi28/CBDNet)
@@ -10,7 +8,7 @@ An unofficial implementation of CBDNet by PyTorch.
 
 ## Quick Start
 
-Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h) and decompression the files to `dataset`, and then download the pretrained [model](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/EXJF791Lo3lMmn7yQiXjMRoB74QYhR97BaL1yZnLoNLJIA?e=OPgck0) and remove it to `checkpoint` folder as follow:
+Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h) and decompression the files to `dataset` folder as follow:
 
 ![](imgs/folder.png)
 

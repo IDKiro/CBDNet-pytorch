@@ -13,7 +13,7 @@ class CBDNet(nn.Module):
     def forward(self, x):
         noise_level = self.fcn(x)
         concat_img = torch.cat([x, noise_level], dim=1)
-        out = self.unet(concat_img)
+        out = self.unet(concat_img) + x
         return noise_level, out
 
 
@@ -22,15 +22,15 @@ class FCN(nn.Module):
         super(FCN, self).__init__()
         self.inc = nn.Sequential(
             nn.Conv2d(3, 32, 3, padding=1),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+            nn.ReLU(inplace=True)
         )
         self.conv = nn.Sequential(
             nn.Conv2d(32, 32, 3, padding=1),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+            nn.ReLU(inplace=True)
         )
         self.outc = nn.Sequential(
             nn.Conv2d(32, 3, 3, padding=1),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+            nn.ReLU(inplace=True)
         )
     
     def forward(self, x):
@@ -41,77 +41,84 @@ class FCN(nn.Module):
         conv5 = self.outc(conv4)
         return conv5
 
+
 class UNet(nn.Module):
     def __init__(self):
         super(UNet, self).__init__()
-        self.inc = inconv(6, 64)
-        self.down1 = down(64, 128)
-        self.down2 = down(128, 256)
-        self.down3 = down(256, 512)
-        self.down4 = down(512, 512)
-        self.up1 = up(1024, 256)
-        self.up2 = up(512, 128)
-        self.up3 = up(256, 64)
-        self.up4 = up(128, 64)
+        
+        self.inc = nn.Sequential(
+            single_conv(6, 64),
+            single_conv(64, 64)
+        )
+
+        self.down1 = nn.AvgPool2d(2)
+        self.conv1 = nn.Sequential(
+            single_conv(64, 128),
+            single_conv(128, 128),
+            single_conv(128, 128)
+        )
+
+        self.down2 = nn.AvgPool2d(2)
+        self.conv2 = nn.Sequential(
+            single_conv(128, 256),
+            single_conv(256, 256),
+            single_conv(256, 256),
+            single_conv(256, 256),
+            single_conv(256, 256),
+            single_conv(256, 256)
+        )
+
+        self.up1 = up(256)
+        self.conv3 = nn.Sequential(
+            single_conv(128, 128),
+            single_conv(128, 128),
+            single_conv(128, 128)
+        )
+
+        self.up2 = up(128)
+        self.conv4 = nn.Sequential(
+            single_conv(64, 64),
+            single_conv(64, 64)
+        )
+
         self.outc = outconv(64, 3)
 
     def forward(self, x):
-        down1 = self.inc(x)
-        down2 = self.down1(down1)
-        down3 = self.down2(down2)
-        down4 = self.down3(down3)
-        down5 = self.down4(down4)
-        up1 = self.up1(down5, down4)
-        up2 = self.up2(up1, down3)
-        up3 = self.up3(up2, down2)
-        up4 = self.up4(up3, down1)
-        up5 = self.outc(up4)
-        return up5
+        inx = self.inc(x)
+
+        down1 = self.down1(inx)
+        conv1 = self.conv1(down1)
+
+        down2 = self.down2(conv1)
+        conv2 = self.conv2(down2)
+
+        up1 = self.up1(conv2, conv1)
+        conv3 = self.conv3(up1)
+
+        up2 = self.up2(conv3, inx)
+        conv4 = self.conv4(up2)
+
+        out = self.outc(conv4)
+        return out
 
 
-class double_conv(nn.Module):
+class single_conv(nn.Module):
     def __init__(self, in_ch, out_ch):
-        super(double_conv, self).__init__()
+        super(single_conv, self).__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding=1),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True),
-            nn.Conv2d(out_ch, out_ch, 3, padding=1),
-            nn.LeakyReLU(negative_slope=0.2, inplace=True)
+            nn.ReLU(inplace=True)
         )
 
     def forward(self, x):
         x = self.conv(x)
-        return x
-
-
-class inconv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(inconv, self).__init__()
-        self.conv = double_conv(in_ch, out_ch)
-
-    def forward(self, x):
-        x = self.conv(x)
-        return x
-
-
-class down(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(down, self).__init__()
-        self.mpconv = nn.Sequential(
-            nn.AvgPool2d(2),
-            double_conv(in_ch, out_ch)
-        )
-
-    def forward(self, x):
-        x = self.mpconv(x)
         return x
 
 
 class up(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch):
         super(up, self).__init__()
-        self.up = nn.ConvTranspose2d(in_ch//2, in_ch//2, 2, stride=2)
-        self.conv = double_conv(in_ch, out_ch)
+        self.up = nn.ConvTranspose2d(in_ch, in_ch//2, 2, stride=2)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
@@ -123,8 +130,7 @@ class up(nn.Module):
         x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
                         diffY // 2, diffY - diffY//2))
 
-        x = torch.cat([x2, x1], dim=1)
-        x = self.conv(x)
+        x = x2 + x1
         return x
 
 
@@ -137,7 +143,8 @@ class outconv(nn.Module):
         x = self.conv(x)
         return x
 
-class fixed_loss(nn.Module):
+
+class fixed_loss1(nn.Module):
     def __init__(self):
         super().__init__()
         
@@ -152,6 +159,26 @@ class fixed_loss(nn.Module):
 
         loss = torch.mean(torch.pow((out_image - gt_image), 2)) + \
                 0.5 * torch.mean(torch.mul(torch.abs(0.3 - F.relu(gt_noise - est_noise)), torch.pow(est_noise - gt_noise, 2))) + \
+                0.05 * tvloss
+        return loss
+
+    def _tensor_size(self,t):
+        return t.size()[1]*t.size()[2]*t.size()[3]
+
+class fixed_loss2(nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, out_image, gt_image, est_noise, gt_noise):
+        h_x = est_noise.size()[2]
+        w_x = est_noise.size()[3]
+        count_h = self._tensor_size(est_noise[:, :, 1:, :])
+        count_w = self._tensor_size(est_noise[:, :, : ,1:])
+        h_tv = torch.pow((est_noise[:, :, 1:, :] - est_noise[:, :, :h_x-1, :]), 2).sum()
+        w_tv = torch.pow((est_noise[:, :, :, 1:] - est_noise[:, :, :, :w_x-1]), 2).sum()
+        tvloss = h_tv / count_h + w_tv / count_w
+
+        loss = torch.mean(torch.pow((out_image - gt_image), 2)) + \
                 0.05 * tvloss
         return loss
 

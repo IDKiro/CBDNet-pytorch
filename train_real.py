@@ -62,8 +62,8 @@ def adjust_learning_rate(optimizer, epoch, lr_update_freq):
 
 if __name__ == '__main__':
     input_dir = './dataset/real/'
-    checkpoint_dir = './checkpoint/'
-    result_dir = './result/'
+    checkpoint_dir = './checkpoint/real/'
+    result_dir = './result/real/'
 
     ps = 512
     save_freq = 100
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
-    criterion = fixed_loss()
+    criterion = fixed_loss2()
     criterion = criterion.cuda()
 
     for epoch in range(cur_epoch, 2001):
