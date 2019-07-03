@@ -8,7 +8,12 @@ An unofficial implementation of CBDNet by PyTorch.
 
 ## Quick Start
 
-Download the [dataset](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h) and decompression the files to `dataset` folder as follow:
+Download the dataset: 
+[[OneDrive](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h)]
+[[Baidu Pan](https://pan.baidu.com/s/1ObvekJcPhtK9RUOC86vmNA) (8ko0)]
+[[Mega](https://mega.nz/#F!uOZEVAYR!fbf-RCtnbUR7mlHZsgiL5g)]
+
+Extract the files to `dataset` folder as follow:
 
 ![](imgs/folder.png)
 
