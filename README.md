@@ -8,14 +8,18 @@ An unofficial implementation of CBDNet by PyTorch.
 
 ## Quick Start
 
-Download the dataset: 
-[[OneDrive](https://zjueducn-my.sharepoint.com/:u:/g/personal/3140103306_zju_edu_cn/Ec0R2eTtC81Is0KvC5mbomsBw2oJ_oV7jahe1srpgVufcQ?e=aFIc7h)]
+### Data
+
+Download the dataset and pre-trained model: 
+[[OneDrive](https://zjueducn-my.sharepoint.com/:f:/g/personal/3140103306_zju_edu_cn/EorD2T0_OHNEu_5rH6IpdzYB0l3SM9IfmyxWhHjyfVfFJA?e=YL4V99)]
 [[Baidu Pan](https://pan.baidu.com/s/1ObvekJcPhtK9RUOC86vmNA) (8ko0)]
 [[Mega](https://mega.nz/#F!uOZEVAYR!fbf-RCtnbUR7mlHZsgiL5g)]
 
-Extract the files to `dataset` folder as follow:
+Extract the files to `dataset` folder and `checkpoint` folder as follow:
 
 ![](imgs/folder.png)
+
+### Train
 
 Train the model on synthetic noisy images:
 
@@ -35,16 +39,27 @@ Train the model on synthetic noisy images and real noisy images:
 python train_all.py
 ```
 
+**In order to reduce the time to read the images, it will save all the images in memory which requires large memory.**
+
+### Test
+
 Test the trained model on DND dataset:
 
 ```
 python test.py
 ```
 
-*The images in DND dataset is very large, if your GPU is not powerfull enough, just uncomment the following line:*
+Optional:
 
-```python
-# noisy_img = noisy_img[0:512, 0:512, :]
+```
+--ckpt {all,real,synthetic}     checkpoint type
+--cpu [CPU]                     Use CPU
+```
+
+Example:
+
+```
+python test.py --ckpt synthetic --cpu
 ```
 
 ## Network Structure

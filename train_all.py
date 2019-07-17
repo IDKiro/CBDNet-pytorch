@@ -110,11 +110,8 @@ if __name__ == '__main__':
 
     model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
-    criterion1 = fixed_loss1()
-    criterion1 = criterion1.cuda()
-
-    criterion2 = fixed_loss2()
-    criterion2 = criterion2.cuda()
+    criterion = fixed_loss()
+    criterion = criterion.cuda()
 
     for epoch in range(cur_epoch, 201):
         cnt=0
@@ -166,7 +163,7 @@ if __name__ == '__main__':
 
                 noise_level_est, output = model(input_var)
 
-                loss = criterion1(output, target_var, noise_level_est, noise_level_var)
+                loss = criterion(output, target_var, noise_level_est, noise_level_var, 1)
                 losses.update(loss.item())
 
                 optimizer.zero_grad()
@@ -248,7 +245,7 @@ if __name__ == '__main__':
 
                     noise_level_est, output = model(input_var)
 
-                    loss = criterion2(output, target_var, noise_level_est, noise_level_var)
+                    loss = criterion(output, target_var, noise_level_est, noise_level_var, 0)
                     losses.update(loss.item())
 
                     optimizer.zero_grad()

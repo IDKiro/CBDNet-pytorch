@@ -2,7 +2,7 @@
 .vscode/
 result/
 dataset/
-checkpoint/*.pth.tar
+checkpoint/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

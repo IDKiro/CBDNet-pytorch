@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
     model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
-    criterion = fixed_loss2()
+    criterion = fixed_loss()
     criterion = criterion.cuda()
 
     for epoch in range(cur_epoch, 2001):
@@ -143,18 +143,18 @@ if __name__ == '__main__':
 
                 noise_level_est, output = model(input_var)
 
-                loss = criterion(output, target_var, noise_level_est, noise_level_var)
+                loss = criterion(output, target_var, noise_level_est, noise_level_var, 0)
                 losses.update(loss.item())
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                print('[{0}][{1}/{2}]\t'
+                print('[{0}][{1}]\t'
                     'lr: {lr:.5f}\t'
                     'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
                     'Time: {time:.3f}'.format(
-                    epoch, cnt, len(train_fns),
+                    epoch, cnt,
                     lr=optimizer.param_groups[-1]['lr'],
                     loss=losses,
                     time=time.time()-st))

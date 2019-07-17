@@ -85,7 +85,7 @@ if __name__ == '__main__':
     result_dir = './result/synthetic/'
 
     save_freq = 100
-    lr_update_freq = 150
+    lr_update_freq = 100
 
     CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl = load_CRF()
 
@@ -100,10 +100,10 @@ if __name__ == '__main__':
 
     model, optimizer, cur_epoch = load_checkpoint(checkpoint_dir)
 
-    criterion = fixed_loss1()
+    criterion = fixed_loss()
     criterion = criterion.cuda()
 
-    for epoch in range(cur_epoch, 301):
+    for epoch in range(cur_epoch, 201):
         cnt=0
         losses = AverageMeter()
         optimizer = adjust_learning_rate(optimizer, epoch, lr_update_freq)
@@ -152,18 +152,18 @@ if __name__ == '__main__':
 
                 noise_level_est, output = model(input_var)
 
-                loss = criterion(output, target_var, noise_level_est, noise_level_var)
+                loss = criterion(output, target_var, noise_level_est, noise_level_var, 1)
                 losses.update(loss.item())
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-                print('[{0}][{1}/{2}]\t'
+                print('[{0}][{1}]\t'
                     'lr: {lr:.5f}\t'
                     'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
                     'Time: {time:.3f}'.format(
-                    epoch, cnt, len(train_fns),
+                    epoch, cnt,
                     lr=optimizer.param_groups[-1]['lr'],
                     loss=losses,
                     time=time.time()-st))
