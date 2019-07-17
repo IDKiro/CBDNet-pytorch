@@ -61,10 +61,7 @@ for ind, test_fn in enumerate(test_fns):
 
         input_var = torch.from_numpy(temp_noisy_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
         if not args.cpu:
-            print('Using GPU!')
             input_var = input_var.cuda()
-        else:
-            print('Using CPU!')
         _, output = model(input_var)
 
         output_np = output.squeeze().cpu().detach().numpy()
