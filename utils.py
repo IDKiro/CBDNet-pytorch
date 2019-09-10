@@ -6,6 +6,38 @@ import scipy.io as sio
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
+class AverageMeter(object):
+	def __init__(self):
+		self.reset()
+
+	def reset(self):
+		self.val = 0
+		self.avg = 0
+		self.sum = 0
+		self.count = 0
+
+	def update(self, val, n=1):
+		self.val = val
+		self.sum += val * n
+		self.count += n
+		self.avg = self.sum / self.count
+
+def ReadImg(filename):
+	img = cv2.imread(filename)
+	img = img[:,:,::-1] / 255.0
+	img = np.array(img).astype('float32')
+
+	return img
+
+def hwc_to_chw(img):
+    return np.transpose(img, axes=[2, 0, 1])
+
+def chw_to_hwc(img):
+    return np.transpose(img, axes=[1, 2, 0])
+
+####################################################
+#################### noise model ###################
+####################################################
 
 def func(x, a):
     return np.power(x, a)
@@ -175,5 +207,7 @@ def AddRealNoise(image, CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl):
     CRF_index = np.random.choice(201)
     pattern = np.random.choice(4) + 1
     noise_img = AddNoiseMosai(image, CRF_para, iCRF_para, I_gl, B_gl, I_inv_gl, B_inv_gl, sigma_s, sigma_c, CRF_index, pattern, 0)
-    return noise_img
+    noise_level = sigma_s * np.power(image, 0.5) + sigma_c
+
+    return noise_img, noise_level
 

@@ -3,30 +3,15 @@ from __future__ import print_function
 import os, time, scipy.io, shutil
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
 import glob
 import re
 import cv2
 
-from utils.noise import *
-from utils.common import *
+from utils import *
 from model import *
 
-
-def DataAugmentation(temp_origin_img, temp_noise_img):
-    if np.random.randint(2, size=1)[0] == 1:
-        temp_origin_img = np.flip(temp_origin_img, axis=1)
-        temp_noise_img = np.flip(temp_noise_img, axis=1)
-    if np.random.randint(2, size=1)[0] == 1: 
-        temp_origin_img = np.flip(temp_origin_img, axis=0)
-        temp_noise_img = np.flip(temp_noise_img, axis=0)
-    if np.random.randint(2, size=1)[0] == 1:
-        temp_origin_img = np.transpose(temp_origin_img, (1, 0, 2))
-        temp_noise_img = np.transpose(temp_noise_img, (1, 0, 2))
-    
-    return temp_origin_img, temp_noise_img
 
 def load_checkpoint(checkpoint_dir):
     if os.path.exists(checkpoint_dir + 'checkpoint.pth.tar'):
@@ -119,31 +104,31 @@ if __name__ == '__main__':
                 
                 temp_origin_img = origin_imgs[ind][yy:yy+ps_temp, xx:xx+ps_temp, :]
                 temp_noise_img = noise_imgs[ind][nind][yy:yy+ps_temp, xx:xx+ps_temp, :]
-                temp_origin_img, temp_noise_img = DataAugmentation(temp_origin_img, temp_noise_img)
                 
-                noise_level = temp_noise_img - temp_origin_img
-
+                if np.random.randint(2, size=1)[0] == 1:
+                    temp_origin_img = np.flip(temp_origin_img, axis=1)
+                    temp_noise_img = np.flip(temp_noise_img, axis=1)
+                if np.random.randint(2, size=1)[0] == 1: 
+                    temp_origin_img = np.flip(temp_origin_img, axis=0)
+                    temp_noise_img = np.flip(temp_noise_img, axis=0)
+                if np.random.randint(2, size=1)[0] == 1:
+                    temp_origin_img = np.transpose(temp_origin_img, (1, 0, 2))
+                    temp_noise_img = np.transpose(temp_noise_img, (1, 0, 2))
+                
                 temp_noise_img_chw = hwc_to_chw(temp_noise_img)
                 temp_origin_img_chw = hwc_to_chw(temp_origin_img)
-                noise_level_chw = hwc_to_chw(noise_level)
 
                 cnt += 1
                 st = time.time()
 
-                input_var = torch.autograd.Variable(
-                    torch.from_numpy(temp_noise_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                    )
-                target_var = torch.autograd.Variable(
-                    torch.from_numpy(temp_origin_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                    )
-                noise_level_var = torch.autograd.Variable(
-                    torch.from_numpy(noise_level_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
-                    )
-                input_var, target_var, noise_level_var = input_var.cuda(), target_var.cuda(), noise_level_var.cuda()
+                input_var = torch.from_numpy(temp_noise_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
+                target_var = torch.from_numpy(temp_origin_img_chw.copy()).type(torch.FloatTensor).unsqueeze(0)
+
+                input_var, target_var = input_var.cuda(), target_var.cuda()
 
                 noise_level_est, output = model(input_var)
 
-                loss = criterion(output, target_var, noise_level_est, noise_level_var, 0)
+                loss = criterion(output, target_var, noise_level_est, 0, 0)
                 losses.update(loss.item())
 
                 optimizer.zero_grad()

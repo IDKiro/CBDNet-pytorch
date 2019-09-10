@@ -4,15 +4,13 @@ import os, time, scipy.io, shutil
 import argparse
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
 import glob
 import re
 import cv2
 
-from utils.noise import *
-from utils.common import *
+from utils import *
 from model import *
 
 parser = argparse.ArgumentParser(description='Testing on DND dataset')
