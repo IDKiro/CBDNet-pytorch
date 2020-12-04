@@ -6,60 +6,41 @@ An unofficial implementation of CBDNet by PyTorch.
 
 [CBDNet in Tensorflow](https://github.com/IDKiro/CBDNet-tensorflow)
 
+#### Update
+
+2020.12.04: We trained the CBDNet model using the dataset in [GMSNet](https://github.com/IDKiro/GMSNet).
+
 ## Quick Start
 
-### Data
+Download the dataset and pretrained model from [GoogleDrive](https://drive.google.com/drive/folders/1-e2nPCr_eP1cTDhFFes27Rjj-QXzMk5u?usp=sharing).
 
-Download the dataset and pre-trained model: 
-[[OneDrive](https://zjueducn-my.sharepoint.com/:f:/g/personal/3140103306_zju_edu_cn/EorD2T0_OHNEu_5rH6IpdzYB0l3SM9IfmyxWhHjyfVfFJA?e=YL4V99)]
-[[Baidu Pan](https://pan.baidu.com/s/1ObvekJcPhtK9RUOC86vmNA) (8ko0)]
-[[Mega](https://mega.nz/#F!uOZEVAYR!fbf-RCtnbUR7mlHZsgiL5g)]
-
-Extract the files to `dataset` folder and `checkpoint` folder as follow:
-
-![](imgs/folder.png)
-
-### Train
-
-Train the model on synthetic noisy images:
+Extract the files to `data` folder and `save_model` folder as follow:
 
 ```
-python train_syn.py
+~/
+  data/
+    SIDD_train/
+      ... (scene id)
+    Syn_train/
+      ... (id)
+    DND/
+      images_srgb/
+        ... (mat files)
+      ... (mat files)
+  save_model/
+    checkpoint.pth.tar
 ```
 
-Train the model on real noisy images:
+Train the model:
 
 ```
-python train_real.py
+python train.py
 ```
 
-Train the model on synthetic noisy images and real noisy images:
+Predict using the trained model:
 
 ```
-python train_all.py
-```
-
-**In order to reduce the time to read the images, it will save all the images in memory which requires large memory.**
-
-### Test
-
-Test the trained model on DND dataset:
-
-```
-python test.py
-```
-
-Optional:
-
-```
---ckpt {all,real,synthetic}     checkpoint type
---cpu [CPU]                     Use CPU
-```
-
-Example:
-
-```
-python test.py --ckpt synthetic --cpu
+python predict.py input_filename output_filename
 ```
 
 ## Network Structure

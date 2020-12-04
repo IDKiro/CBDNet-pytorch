@@ -1,8 +1,8 @@
 # Add by user
 .vscode/
 result/
-dataset/
-checkpoint/
+data/
+save_model/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

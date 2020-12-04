@@ -4,42 +4,65 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class CBDNet(nn.Module):
-    def __init__(self):
-        super(CBDNet, self).__init__()
-        self.fcn = FCN()
-        self.unet = UNet()
-    
+class single_conv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(single_conv, self).__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_ch, out_ch, 3, padding=1),
+            nn.ReLU(inplace=True)
+        )
+
     def forward(self, x):
-        noise_level = self.fcn(x)
-        concat_img = torch.cat([x, noise_level], dim=1)
-        out = self.unet(concat_img) + x
-        return noise_level, out
+        return self.conv(x)
+
+
+class up(nn.Module):
+    def __init__(self, in_ch):
+        super(up, self).__init__()
+        self.up = nn.ConvTranspose2d(in_ch, in_ch//2, 2, stride=2)
+
+    def forward(self, x1, x2):
+        x1 = self.up(x1)
+        
+        # input is CHW
+        diffY = x2.size()[2] - x1.size()[2]
+        diffX = x2.size()[3] - x1.size()[3]
+
+        x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
+                        diffY // 2, diffY - diffY//2))
+
+        x = x2 + x1
+        return x
+
+
+class outconv(nn.Module):
+    def __init__(self, in_ch, out_ch):
+        super(outconv, self).__init__()
+        self.conv = nn.Conv2d(in_ch, out_ch, 1)
+
+    def forward(self, x):
+        x = self.conv(x)
+        return x
 
 
 class FCN(nn.Module):
     def __init__(self):
         super(FCN, self).__init__()
-        self.inc = nn.Sequential(
+        self.fcn = nn.Sequential(
             nn.Conv2d(3, 32, 3, padding=1),
-            nn.ReLU(inplace=True)
-        )
-        self.conv = nn.Sequential(
+            nn.ReLU(inplace=True),
             nn.Conv2d(32, 32, 3, padding=1),
-            nn.ReLU(inplace=True)
-        )
-        self.outc = nn.Sequential(
-            nn.Conv2d(32, 3, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 32, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(32, 1, 3, padding=1),
             nn.ReLU(inplace=True)
         )
     
     def forward(self, x):
-        conv1 = self.inc(x)
-        conv2 = self.conv(conv1)
-        conv3 = self.conv(conv2)
-        conv4 = self.conv(conv3)
-        conv5 = self.outc(conv4)
-        return conv5
+        return self.fcn(x)
 
 
 class UNet(nn.Module):
@@ -47,7 +70,7 @@ class UNet(nn.Module):
         super(UNet, self).__init__()
         
         self.inc = nn.Sequential(
-            single_conv(6, 64),
+            single_conv(4, 64),
             single_conv(64, 64)
         )
 
@@ -102,46 +125,17 @@ class UNet(nn.Module):
         return out
 
 
-class single_conv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(single_conv, self).__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_ch, out_ch, 3, padding=1),
-            nn.ReLU(inplace=True)
-        )
-
+class Network(nn.Module):
+    def __init__(self):
+        super(Network, self).__init__()
+        self.fcn = FCN()
+        self.unet = UNet()
+    
     def forward(self, x):
-        x = self.conv(x)
-        return x
-
-
-class up(nn.Module):
-    def __init__(self, in_ch):
-        super(up, self).__init__()
-        self.up = nn.ConvTranspose2d(in_ch, in_ch//2, 2, stride=2)
-
-    def forward(self, x1, x2):
-        x1 = self.up(x1)
-        
-        # input is CHW
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
-
-        x1 = F.pad(x1, (diffX // 2, diffX - diffX//2,
-                        diffY // 2, diffY - diffY//2))
-
-        x = x2 + x1
-        return x
-
-
-class outconv(nn.Module):
-    def __init__(self, in_ch, out_ch):
-        super(outconv, self).__init__()
-        self.conv = nn.Conv2d(in_ch, out_ch, 1)
-
-    def forward(self, x):
-        x = self.conv(x)
-        return x
+        noise_level = self.fcn(x)
+        concat_img = torch.cat([x, noise_level], dim=1)
+        out = self.unet(concat_img) + x
+        return noise_level, out
 
 
 class fixed_loss(nn.Module):
@@ -149,6 +143,10 @@ class fixed_loss(nn.Module):
         super().__init__()
         
     def forward(self, out_image, gt_image, est_noise, gt_noise, if_asym):
+        l2_loss = F.mse_loss(out_image, gt_image)
+
+        asym_loss = torch.mean(if_asym * torch.abs(0.3 - F.relu(gt_noise - est_noise)) * torch.pow(est_noise - gt_noise, 2))
+
         h_x = est_noise.size()[2]
         w_x = est_noise.size()[3]
         count_h = self._tensor_size(est_noise[:, :, 1:, :])
@@ -157,9 +155,8 @@ class fixed_loss(nn.Module):
         w_tv = torch.pow((est_noise[:, :, :, 1:] - est_noise[:, :, :, :w_x-1]), 2).sum()
         tvloss = h_tv / count_h + w_tv / count_w
 
-        loss = torch.mean(torch.pow((out_image - gt_image), 2)) + \
-                if_asym * 0.5 * torch.mean(torch.mul(torch.abs(0.3 - F.relu(gt_noise - est_noise)), torch.pow(est_noise - gt_noise, 2))) + \
-                0.05 * tvloss
+        loss = l2_loss +  0.5 * asym_loss + 0.05 * tvloss
+
         return loss
 
     def _tensor_size(self,t):
