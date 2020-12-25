@@ -57,7 +57,7 @@ class FCN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(32, 32, 3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 1, 3, padding=1),
+            nn.Conv2d(32, 3, 3, padding=1),
             nn.ReLU(inplace=True)
         )
     
@@ -70,7 +70,7 @@ class UNet(nn.Module):
         super(UNet, self).__init__()
         
         self.inc = nn.Sequential(
-            single_conv(4, 64),
+            single_conv(6, 64),
             single_conv(64, 64)
         )
 

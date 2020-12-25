@@ -64,7 +64,7 @@ class Real(Dataset):
 		if self.patch_size > 0:
 			[clean_img, noise_img] = get_patch([clean_img, noise_img], self.patch_size)
 
-		return hwc_to_chw(noise_img), hwc_to_chw(clean_img), np.zeros((1, self.patch_size, self.patch_size)), np.zeros((1, self.patch_size, self.patch_size))
+		return hwc_to_chw(noise_img), hwc_to_chw(clean_img), np.zeros((3, self.patch_size, self.patch_size)), np.zeros((3, self.patch_size, self.patch_size))
 
 
 class Syn(Dataset):
@@ -94,9 +94,9 @@ class Syn(Dataset):
 
 		clean_img = read_img(clean_fn)
 		noise_img = read_img(clean_fn.replace('GT_SRGB', 'NOISY_SRGB'))
-		sigma_img = read_img(clean_fn.replace('GT_SRGB', 'SIGMA_SRGB'), True) / 15.	# inverse scaling
+		sigma_img = read_img(clean_fn.replace('GT_SRGB', 'SIGMA_SRGB')) / 15.	# inverse scaling
 
 		if self.patch_size > 0:
 			[clean_img, noise_img, sigma_img] = get_patch([clean_img, noise_img, sigma_img], self.patch_size)
 
-		return hwc_to_chw(noise_img), hwc_to_chw(clean_img), hwc_to_chw(sigma_img), np.ones((1, self.patch_size, self.patch_size))
+		return hwc_to_chw(noise_img), hwc_to_chw(clean_img), hwc_to_chw(sigma_img), np.ones((3, self.patch_size, self.patch_size))

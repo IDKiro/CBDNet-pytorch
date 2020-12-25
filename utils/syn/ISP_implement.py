@@ -134,7 +134,7 @@ class ISP:
 
         noisy_img = img +  \
             sigma_total * np.random.randn(img.shape[0], img.shape[1])
-        return noisy_img, sigma_total
+        return noisy_img, sigma_s, sigma_c
 
     def noise_generate_srgb(self, img, configs='DND'):
         # -------------------------- CAMERA SETTING --------------------------
@@ -196,7 +196,7 @@ class ISP:
         img_mosaic_gt = img_mosaic
 
         # -------------------------- POISSON-GAUSSIAN NOISE ON RAW --------------------------
-        img_mosaic_noise, sigma_total = self.add_PG_noise(img_mosaic)
+        img_mosaic_noise, sigma_s, sigma_c = self.add_PG_noise(img_mosaic)
 
         # -------------------------- QUANTIZATION NOISE AND CLIPPING EFFECT ON RAW --------------------------
         upper_bound = math.pow(2, math.ceil(math.log(whitelevel + 1, 2))) - 1
@@ -229,5 +229,7 @@ class ISP:
         noise = np.clip(img_Irgb, 0, 1) - np.clip(img_Irgb_gt, 0, 1)
         img_Irgb_gt = np.clip(img_rgb, 0, 1)
         img_Irgb = np.clip((img_rgb + noise), 0, 1)
+
+        sigma_total = np.sqrt(sigma_s * img + sigma_c)  # noise level map
 
         return np.uint8(np.round(img_Irgb_gt*255)), np.uint8(np.round(img_Irgb*255)), sigma_total
