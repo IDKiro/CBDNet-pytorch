@@ -8,7 +8,7 @@ Unofficial PyTorch implementation of CBDNet.
 
 #### Update
 
-2020.12.04: We trained the CBDNet model using the dataset in [GMSNet](https://github.com/IDKiro/GMSNet). PSNR (DND benchmark): 38.06 -> 39.63.
+2020.12.04: We trained the CBDNet model using the dataset in [GMSNet](https://doi.org/10.1109/LSP.2020.3039726). PSNR (DND benchmark): 38.06 -> 39.63.
 
 ## Quick Start
 
