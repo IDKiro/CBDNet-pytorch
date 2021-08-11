@@ -1,14 +1,12 @@
 # CBDNet-pytorch
 
-Unofficial PyTorch implementation of CBDNet.
+It's an unofficial PyTorch implementation of CBDNet.
+
+We used higher quality real and synthetic datasets for training and achieved better performance on DND.
 
 [CBDNet in MATLAB](https://github.com/GuoShi28/CBDNet)
 
 [CBDNet in Tensorflow](https://github.com/IDKiro/CBDNet-tensorflow)
-
-#### Update
-
-2020.12.04: We trained the CBDNet model using the dataset in [GMSNet](https://doi.org/10.1109/LSP.2020.3039726). PSNR (DND benchmark): 38.06 -> 39.63.
 
 ## Quick Start
 

@@ -145,7 +145,7 @@ class fixed_loss(nn.Module):
     def forward(self, out_image, gt_image, est_noise, gt_noise, if_asym):
         l2_loss = F.mse_loss(out_image, gt_image)
 
-        asym_loss = torch.mean(if_asym * torch.abs(0.3 - F.relu(gt_noise - est_noise)) * torch.pow(est_noise - gt_noise, 2))
+        asym_loss = torch.mean(if_asym * torch.abs(0.3 - torch.lt(gt_noise, est_noise).float()) * torch.pow(est_noise - gt_noise, 2))
 
         h_x = est_noise.size()[2]
         w_x = est_noise.size()[3]
@@ -159,5 +159,5 @@ class fixed_loss(nn.Module):
 
         return loss
 
-    def _tensor_size(self,t):
+    def _tensor_size(self, t):
         return t.size()[1]*t.size()[2]*t.size()[3]
